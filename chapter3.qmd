@@ -1,0 +1,539 @@
+---
+title: "Nonparametric Survival Curve Estimation | Confidence Intervals | Left Truncation | "
+author: "Eric Delmelle | Lehigh University"
+format: 
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    code-fold: false
+    theme: default
+  pdf:
+    toc: true
+    number-sections: true
+execute:
+  warning: false
+  message: false
+---
+
+# Introduction
+
+- Many possible hazard function shapes when using parametric models  
+  - Challenge: which parametric family to choose?  
+  - For human/animal survival, no single family always fits well  
+
+- Nonparametric estimators of survival function  
+  - Already discussed
+  - Most common: **Kaplan–Meier (product-limit) estimator**  
+  - Confidence intervals; mean and median survival 
+  - Kernel smoothing
+  - **data**: Gastric Cancer Survival dataset
+
+
+- Left truncation
+  - **data**: Channing House Retirement dataset
+
+# Nonparametric Estimation of the Survival Function
+
+## The Kaplan-Meier (KM) Estimator
+
+-   (we have seen this already)
+-   Product over the failure times of the conditional probabilities of surviving to the next failure time. 
+
+$$\hat{S}(t) = \prod_{t_i \leq t} (1 - \hat{q}_i) = \prod_{t_i \leq t} \left(1 - \frac{d_i}{n_i}\right)$$
+
+-   where $n_i$ is the number of subjects at risk at time $t_i$, and $d_i$ is the number of individuals who fail at that time.
+
+## Example Data and Calculation: Gastric Cancer
+
+-   Let's work through the Kaplan-Meier calculation using the **Gastric Cancer** Survival Data (see page 6 in the book, section 1.4, example 1.2 - Xelox in patients with advanced gastric center).
+-   The data is loaded with the `asaur` package
+-   A single-arm trial = everyone in the study gets the same treatment (here, XELOX). No control group or comparison arm (like placebo or standard therapy).
+-   Phase II - mid-stage study where all participants get XELOX chemo; researchers tracked survival outcomes to decide if it’s worth moving to a larger, controlled Phase III trial.
+-   The **Delta** variable tell us whether the event occurred or not (1=dead).
+-   Note the confidence intervals are set to False here.
+-   n = 48 → total number of patients in the dataset (the trial enrolled 48).
+-   Events = 32 → the number of patients who experienced the event of interest.
+-   About 10.3 months, 50% of patients had experienced progression or death.
+
+```{r}
+#| label: setup
+#| include: true
+
+# Load required libraries
+library(survival)
+library(muhaz)
+library(asaur)
+library(boot)
+
+
+# see example 1.2
+timeMonths <- gastricXelox$timeWeeks*7/30.25
+delta <- gastricXelox$delta
+
+# Create survival object
+result.km <- survfit(Surv(timeMonths, delta) ~ 1, conf.type="none")
+print(result.km)
+plot(result.km, conf.int=F, mark="|", xlab="Time in months",ylab="Survival probability")
+```
+
+## Confidence Intervals (CI)
+
+-   There are several approaches to constructing confidence intervals for the Kaplan-Meier estimator.
+-   Each with different properties and advantages.
+  -   Plain (can be negative!!!)
+  -   Log
+  -   Log-Log
+
+### Plain (Linear) Confidence Intervals
+
+The most straightforward approach uses the delta method to obtain the variance of $\hat{S}(t)$ directly:
+
+$\text{var}[\hat{S}(t)] \approx [\hat{S}(t)]^2 \sum_{t_i \leq t} \frac{d_i}{n_i(n_i - d_i)}$
+
+This leads to the **plain confidence interval**:
+$\hat{S}(t) \pm z_{\alpha/2} \sqrt{\text{var}[\hat{S}(t)]}$
+
+```{r}
+#| label: plain-ci-only
+#| fig-cap: "Plain Confidence Intervals"
+
+result.km.plain <- survfit(Surv(timeMonths, delta) ~ 1, conf.type = "plain")
+# Plot comparison
+plot(result.km.plain, conf.int = TRUE, col = "red", 
+     xlab = "Time in years", ylab = "Survival probability",
+     main = "Plain Confidence Intervals")
+legend("topright", 
+       legend = c("Plain"),
+       col = c("red"),
+       lty = 1)
+```
+
+
+
+
+
+### Problems with Plain Confidence Intervals
+
+The plain confidence interval has a fundamental problem: **it can extend below 0 or above 1**, which is nonsensical for probabilities. This occurs because:
+
+-   The normal approximation may be poor, especially with small sample sizes
+-   The survival function is bounded between 0 and 1, but the normal distribution is unbounded
+-   The distribution of $\hat{S}(t)$ can be quite skewed, especially near the tails
+
+### Log Transformation
+
+-   An improvement uses the log transformation of $\hat{S}(t)$:
+
+$\text{var}[\log \hat{S}(t)] = \sum_{t_i \leq t} \frac{d_i}{n_i(n_i - d_i)}$
+
+-   The log confidence interval is:
+$\exp\left\{\log[\hat{S}(t)] \pm z_{\alpha/2} \sqrt{\text{var}[\log \hat{S}(t)]}\right\}$
+
+-   This ensures the confidence interval stays within $(0,1]$
+-   Can still have issues when $\hat{S}(t)$ approaches 1.
+
+```{r}
+#| label: plain-log-comparison
+#| fig-cap: "Plain vs Log Confidence Intervals"
+
+# Demonstrate different confidence interval types
+result.km.plain <- survfit(Surv(timeMonths, delta) ~ 1, conf.type = "plain")
+result.km.log <- survfit(Surv(timeMonths, delta) ~ 1, conf.type = "log")
+
+# Plot comparison
+plot(result.km.plain, conf.int = TRUE, col = "red", 
+     xlab = "Time in years", ylab = "Survival probability",
+     main = "Comparison of Confidence Interval Types")
+lines(result.km.log, conf.int = TRUE, col = "blue")
+
+legend("topright", 
+       legend = c("Plain", "Log"),
+       col = c("red", "blue"),
+       lty = 1)
+```
+
+### Complementary Log-Log Transformation (Most Satisfying)
+
+-   The **complementary log-log transformation** is generally preferred because it has the best statistical properties:
+
+$\text{var}[\log[-\log \hat{S}(t)]] \approx \frac{1}{[\log \hat{S}(t)]^2} \sum_{t_i \leq t} \frac{d_i}{n_i(n_i - d_i)}$
+
+-   The confidence interval becomes:
+$\exp\left\{-\exp\left[\log(-\log[\hat{S}(t)]) \pm z_{\alpha/2} \sqrt{\text{var}[\log[-\log \hat{S}(t)]]}\right]\right\}$
+
+```{r}
+#| label: all-ci-comparison
+#| fig-cap: "Comparison of All Confidence Interval Types"
+
+# Demonstrate different confidence interval types
+result.km.plain <- survfit(Surv(timeMonths, delta) ~ 1, conf.type = "plain")
+result.km.log <- survfit(Surv(timeMonths, delta) ~ 1, conf.type = "log")
+result.km.loglog <- survfit(Surv(timeMonths, delta) ~ 1, conf.type = "log-log")
+
+# Plot comparison
+plot(result.km.plain, conf.int = TRUE, col = "red", 
+     xlab = "Time in years", ylab = "Survival probability",
+     main = "Comparison of Confidence Interval Types")
+lines(result.km.log, conf.int = TRUE, col = "blue")
+lines(result.km.loglog, conf.int = TRUE, col = "green")
+
+legend("topright", 
+       legend = c("Plain", "Log", "Log-log"),
+       col = c("red", "blue", "green"),
+       lty = 1)
+```
+
+### Why Log-Log is "More Satisfying"
+
+-   **Bounded intervals**: Confidence intervals are **always between 0 and 1**
+-   **Better symmetry**: The transformation creates more symmetric distributions, making the normal approximation more accurate
+-   **Improved coverage**: Studies show log-log intervals have coverage probabilities closer to the nominal level (e.g., 95%)
+-   **Theoretical justification**: The transformation is related to the cumulative hazard function, which has better asymptotic properties
+-   **Stable behavior**: Performs well even when $\hat{S}(t)$ is close to 0 or 1
+
+```{r}
+#| label: ci-comparison
+#| tbl-cap: "Confidence Interval Comparison"
+
+# Compare the three methods for our example data
+summary(result.km.plain)
+cat("\n--- Log transformation ---\n")
+summary(result.km.log)
+cat("\n--- Log-log transformation ---\n")
+summary(result.km.loglog)
+```
+
+
+
+
+# Finding the Median Survival
+
+-   The median survival time is defined as:
+$$\hat{t}_{med} = \inf\{t : \hat{S}(t) \leq 0.5\}$$
+
+```{r}
+#| label: median-survival
+
+# Making sure that we actually generate CI
+result.km <- survfit(Surv(timeMonths, delta) ~ 1, conf.type="log-log")
+print(result.km)
+```
+
+To find a $1-\alpha$ confidence interval for the median, we use:
+
+$$-z_{\alpha/2} \leq \frac{g\{\hat{S}(t)\} - g(0.5)}{\sqrt{\text{var}[g\{\hat{S}(t)\}]}} \leq z_{\alpha/2}$$
+
+where $g(u) = \log[-\log(u)]$ is the complementary log-log transformation.
+
+# Median Follow-Up Time
+
+-   One measure of the quality of a clinical trial is the duration of follow-up. 
+-   The "potential" median survival uses the "reverse" Kaplan-Meier method:
+
+```{r}
+#| label: median-followup
+
+# Reverse censoring indicators
+delta.followup <- 1 - delta
+
+# Compute reverse Kaplan-Meier
+reverse_km <- survfit(Surv(timeMonths, delta.followup) ~ 1)
+print(reverse_km)
+
+# Compare with simple median
+cat("Simple median follow-up:", median(timeMonths), "months\n")
+cat("Potential follow-up (reverse KM):", reverse_km$median, "months\n")
+```
+# Quantiles
+-   What is the survival probabilities
+-   First and third quartiles 
+
+```{r}
+# Quantiles for gastric cancer data
+quantile(result.km, probs = c(0.25, 0.75))
+```
+-   and remember the other question:
+-   what is my probability to survive at 5 years?
+
+```{r survival-chance}
+result.km <- survfit(Surv(timeMonths, delta) ~ 1, conf.type="log-log")
+summary(result.km, times = 5)
+```
+
+# Smoothed Hazard and Survival Function Estimates (Kernel)
+
+-   The hazard function estimate at failure times is quite unstable. 
+-   A kernel smoother provides a better visualization.
+-   This is not a replacement for parametric distribution like `exponential` or `Weibull`, but provides an interesting visualization
+
+$$\hat{h}(t) = \frac{1}{b} \sum_{i=1}^D K\left(\frac{t - t_{(i)}}{b}\right) \frac{d_i}{n_i}$$
+
+where $K(u)$ is a kernel function (e.g., Epanechnikov kernel: $K(u) = \frac{3}{4}(1-u^2)$ for $-1 \leq u \leq 1$).
+
+```{r}
+#| label: smoothed-hazard
+#| fig-cap: "Smoothed Hazard Function Estimate"
+
+# Piecewise exponential hazard estimate
+result.pe5 <- pehaz(timeMonths, delta, width = 5, max.time = 20)
+result.pe1 <- pehaz(timeMonths, delta, width = 1, max.time = 20)
+
+# Plot piecewise estimates
+plot(result.pe5, 
+     ylim = c(0, 0.15), 
+     col = "black",
+     xlab = "Time",
+     ylab = "Hazard Rate",
+     main = "Hazard Function Estimates")
+lines(result.pe1, col = "gray")
+
+# Smooth hazard estimate
+result.smooth <- muhaz(timeMonths, delta, 
+                       bw.smooth = 20,
+                       b.cor = "left", 
+                       max.time = 20)
+lines(result.smooth, col = "blue", lwd = 2)
+
+legend("topright", 
+       legend = c("5-month intervals", "1-month intervals", "Smoothed"),
+       col = c("black", "gray", "blue"),
+       lty = 1,
+       lwd = c(1, 1, 2))
+```
+
+## Smooth Survival Function from Hazard
+
+```{r}
+#| label: smooth-survival
+#| fig-cap: "Comparison of Kaplan-Meier and Smoothed Survival Estimates"
+
+# Extract smoothed hazard estimates
+haz <- result.smooth$haz.est
+times <- result.smooth$est.grid
+
+# Compute smooth survival function
+surv_smooth <- exp(-cumsum(haz[1:(length(haz)-1)] * diff(times)))
+
+# Plot comparison
+result.km.compare <- survfit(Surv(timeMonths, delta) ~ 1, conf.type = "none")
+plot(result.km.compare, 
+     conf.int = FALSE, 
+     mark = "|", 
+     xlab = "Time in months",
+     xlim = c(0, 30), 
+     ylab = "Survival probability",
+     main = "Kaplan-Meier vs Smoothed Survival Estimates")
+
+lines(surv_smooth ~ times[1:(length(times) - 1)], col = "red", lwd = 2)
+
+legend("topright", 
+       legend = c("Kaplan-Meier", "Smoothed"),
+       col = c("black", "red"),
+       lty = 1,
+       lwd = c(1, 2))
+```
+
+# Left Truncation
+
+-   Left truncation occurs when subjects can only be observed after a certain time point. 
+-   Requires modification of the Kaplan-Meier estimator where subjects enter the risk set at their truncation time.
+
+
+## Channing House Example
+
+-   Collection of survival data from the Channing House retirement home in Palo Alto, California, collected between 1964 and 1975. 
+-   It records the age at entry and at death or exit (due to leaving or being alive at the study's end) for 97 men and 365 women, focusing on differences in survival between sexes after accounting for age. 
+-   The data is used for survival analysis and features left truncation (residents entered at different ages, so their pre-Channing House lifetimes were not observed).
+-   Also right censoring (some residents were still alive at the study's end).
+
+```{r}
+# We will use the channing dataset - loaded with 'boot' earlier
+
+
+# Convert ages from months to years
+channing$entryYears <- channing$entry / 12
+channing$exitYears <- channing$exit / 12
+
+# Check sex coding
+cat("Sex coding in dataset:\n")
+#print(table(channing$sex))
+
+# Filter for males using text matching
+
+cat("Age range at entry:", range(channing$entryYears), "\n")
+cat("Age range at exit:", range(channing$exitYears), "\n")
+
+# Standard Kaplan-Meier with left truncation
+result.km.standard <- survfit(Surv(entryYears, exitYears, cens, type = "counting") ~ 1, 
+                              data = channing)
+
+
+# Conditional on reaching age 68
+result.km.68 <- survfit(Surv(entryYears, exitYears, cens, type = "counting") ~ 1, 
+                        data = channing,
+                        start.time = 68)
+
+# Plot all three estimates
+plot(result.km.standard, 
+     xlim = c(64, 101), 
+     xlab = "Age",
+     ylab = "Survival probability", 
+     conf.int = FALSE,
+     main = "Survival Estimates for Channing House Data (Males)")
+
+lines(result.km.68, col = "green", conf.int = FALSE)
+
+legend("topright", 
+       legend = c("KM",  "KM 68 and older"),
+       lty = 1, 
+       col = c("black", "green"))
+
+# Print summaries
+cat("\n=== Standard KM with left truncation ===\n")
+print(result.km.standard)
+
+
+cat("\n=== KM conditional on age 68+ ===\n")
+print(result.km.68)
+```
+
+
+```{r 75 years group}
+
+# Remove rows with NA values in key variables
+channing <- channing[complete.cases(channing$entryYears, channing$exitYears, channing$cens), ]
+
+# Check for problematic observations where exit <= entry
+cat("Observations where exit <= entry:\n")
+problematic <- channing$exitYears <= channing$entryYears
+print(sum(problematic, na.rm = TRUE))
+
+# Remove problematic observations
+channing <- channing[channing$exitYears > channing$entryYears, ]
+
+cat("Remaining observations after cleaning:", nrow(channing), "\n")
+
+# Create age group based on entry age
+channing$ageGroup <- ifelse(channing$entryYears >= 75, "75+ at entry", "Under 75 at entry")
+
+# Check the distribution
+cat("Age group distribution:\n")
+print(table(channing$ageGroup))
+
+# Survival analysis by age group with left truncation
+result.km.byage <- survfit(Surv(entryYears, exitYears, cens, type = "counting") ~ ageGroup, 
+                           data = channing)
+
+# Plot comparison
+plot(result.km.byage, 
+     xlim = c(64, 101), 
+     xlab = "Age",
+     ylab = "Survival probability", 
+     conf.int = FALSE,
+     col = c("red", "blue"),
+     lty = c(1, 1),
+     lwd = 2,
+     main = "Survival by Entry Age: Channing House Data")
+
+legend("topright", 
+       legend = c("Under 75 at entry", "75+ at entry"),
+       col = c("red", "blue"),
+       lty = c(1, 1),
+       lwd = 2)
+
+# Print summaries for each group
+cat("\n=== Survival by Entry Age Group ===\n")
+print(result.km.byage)
+```
+## What do we see from the results?
+
+-   231 people entered at 75+, 226 entered under 75 (well-balanced groups)
+-   Median survival age: 86.8 years for 75+ entry group vs 82.4 years for under 75 group
+-   More events (deaths) in the 75+ group (111 vs 64)
+-   Be careful!!!
+  -   Left truncation can create complex interpretational challenges in survival analysis
+  -   The "better" survival in the 75+ group might reflect selection effects rather than true differences in longevity.
+  -   **Selection bias**: People who entered at 75+ had to survive to at least 75 to be observed, so they represent a subset who were already "survivors"
+  -   **Different risk periods**: The under 75 group includes people who entered much younger and were observed through more of their life course
+  -   **Survivor effect**: The 75+ entry group might represent individuals with particularly good health/genetics who lived long enough to enter the retirement home at advanced ages
+
+# Key Takeaways
+
+1. **Kaplan-Meier estimator** is the most widely used nonparametric survival function estimator
+3. **Confidence intervals** should use the complementary log-log transformation for better properties
+4. **Median survival** is the time when the survival function first drops to 0.5 or below
+5. **Smoothed hazard functions** provide better visualization than step functions
+6. **Left truncation** requires careful handling to avoid bias in survival estimates
+
+## Additional Notes
+
+1. The `bshazard` package provides B-spline based smoothing for hazard functions
+2. Other percentiles can be estimated similarly to the median using:
+   $$\hat{t}_p = \inf\{t : \hat{S}(t) \leq 1-p\}$$
+3. Simultaneous confidence bands are available in the `kmconfband` package
+4. Right truncation is more complex and requires specialized methods like those in the `DTDA` package
+
+## Exercises
+
+### Exercise 3.1
+Find the median survival and 95% confidence interval from the example data. Explain why the upper limit might be undefined.
+
+```{r}
+#| label: exercise-3-1
+
+# Median survival from our example
+result.km
+summary(result.km)
+
+# The upper confidence limit is undefined (NA) when the upper confidence 
+# band for the survival curve never drops to 0.5
+```
+
+### Exercise 3.2
+Find the first and third quartiles for the gastric cancer data with 95% confidence intervals.
+
+```{r}
+#| label: exercise-3-2
+
+# Quantiles for gastric cancer data
+quantile(result.km, probs = c(0.25, 0.75))
+
+# Note: Quartiles are times when S(t) = 0.75 (first quartile) and S(t) = 0.25 (third quartile)
+```
+
+### Exercise 3.3
+Create a smooth hazard function estimate with bandwidth 20 and explain any multiple peaks.
+
+```{r}
+#| label: exercise-3-3
+#| fig-cap: "Smooth Hazard with Bandwidth 20"
+
+# Already created in the main text with bw.smooth = 20
+plot(result.smooth, 
+     xlab = "Time", 
+     ylab = "Hazard Rate",
+     main = "Smooth Hazard Function (bandwidth = 20)")
+
+# Multiple peaks could indicate:
+# 1. Different risk periods in disease progression
+# 2. Treatment effects wearing off
+# 3. Heterogeneity in patient populations
+# 4. Artifacts from smoothing procedure
+```
+
+### Exercise 3.4
+Compare left-truncated vs. non-truncated estimates and discuss potential bias.
+
+```{r}
+#| label: exercise-3-4
+#| fig-cap: "Comparison of Truncated vs Non-truncated Estimates"
+
+# This comparison shows how ignoring left truncation can lead to biased estimates
+# The non-truncated estimate may underestimate survival at younger ages
+# because individuals who died young were never observed in the study
+```
+
+---
+
+[← Return to Course Materials](https://bsta-150.github.io/course/)
