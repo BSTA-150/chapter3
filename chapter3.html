@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.450">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Eric Delmelle | Lehigh University">
+
+<title>Nonparametric Survival Curve Estimation | Confidence Intervals | Left Truncation |</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="chapter3_files/libs/clipboard/clipboard.min.js"></script>
+<script src="chapter3_files/libs/quarto-html/quarto.js"></script>
+<script src="chapter3_files/libs/quarto-html/popper.min.js"></script>
+<script src="chapter3_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="chapter3_files/libs/quarto-html/anchor.min.js"></script>
+<link href="chapter3_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="chapter3_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="chapter3_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="chapter3_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="chapter3_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+</head>
+
+<body>
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a></li>
+  <li><a href="#nonparametric-estimation-of-the-survival-function" id="toc-nonparametric-estimation-of-the-survival-function" class="nav-link" data-scroll-target="#nonparametric-estimation-of-the-survival-function"><span class="header-section-number">2</span> Nonparametric Estimation of the Survival Function</a>
+  <ul class="collapse">
+  <li><a href="#the-kaplan-meier-km-estimator" id="toc-the-kaplan-meier-km-estimator" class="nav-link" data-scroll-target="#the-kaplan-meier-km-estimator"><span class="header-section-number">2.1</span> The Kaplan-Meier (KM) Estimator</a></li>
+  <li><a href="#example-data-and-calculation-gastric-cancer" id="toc-example-data-and-calculation-gastric-cancer" class="nav-link" data-scroll-target="#example-data-and-calculation-gastric-cancer"><span class="header-section-number">2.2</span> Example Data and Calculation: Gastric Cancer</a></li>
+  <li><a href="#confidence-intervals-ci" id="toc-confidence-intervals-ci" class="nav-link" data-scroll-target="#confidence-intervals-ci"><span class="header-section-number">2.3</span> Confidence Intervals (CI)</a>
+  <ul class="collapse">
+  <li><a href="#plain-linear-confidence-intervals" id="toc-plain-linear-confidence-intervals" class="nav-link" data-scroll-target="#plain-linear-confidence-intervals"><span class="header-section-number">2.3.1</span> Plain (Linear) Confidence Intervals</a></li>
+  <li><a href="#problems-with-plain-confidence-intervals" id="toc-problems-with-plain-confidence-intervals" class="nav-link" data-scroll-target="#problems-with-plain-confidence-intervals"><span class="header-section-number">2.3.2</span> Problems with Plain Confidence Intervals</a></li>
+  <li><a href="#log-transformation" id="toc-log-transformation" class="nav-link" data-scroll-target="#log-transformation"><span class="header-section-number">2.3.3</span> Log Transformation</a></li>
+  <li><a href="#complementary-log-log-transformation-most-satisfying" id="toc-complementary-log-log-transformation-most-satisfying" class="nav-link" data-scroll-target="#complementary-log-log-transformation-most-satisfying"><span class="header-section-number">2.3.4</span> Complementary Log-Log Transformation (Most Satisfying)</a></li>
+  <li><a href="#why-log-log-is-more-satisfying" id="toc-why-log-log-is-more-satisfying" class="nav-link" data-scroll-target="#why-log-log-is-more-satisfying"><span class="header-section-number">2.3.5</span> Why Log-Log is “More Satisfying”</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#finding-the-median-survival" id="toc-finding-the-median-survival" class="nav-link" data-scroll-target="#finding-the-median-survival"><span class="header-section-number">3</span> Finding the Median Survival</a></li>
+  <li><a href="#median-follow-up-time" id="toc-median-follow-up-time" class="nav-link" data-scroll-target="#median-follow-up-time"><span class="header-section-number">4</span> Median Follow-Up Time</a></li>
+  <li><a href="#quantiles" id="toc-quantiles" class="nav-link" data-scroll-target="#quantiles"><span class="header-section-number">5</span> Quantiles</a></li>
+  <li><a href="#smoothed-hazard-and-survival-function-estimates-kernel" id="toc-smoothed-hazard-and-survival-function-estimates-kernel" class="nav-link" data-scroll-target="#smoothed-hazard-and-survival-function-estimates-kernel"><span class="header-section-number">6</span> Smoothed Hazard and Survival Function Estimates (Kernel)</a>
+  <ul class="collapse">
+  <li><a href="#smooth-survival-function-from-hazard" id="toc-smooth-survival-function-from-hazard" class="nav-link" data-scroll-target="#smooth-survival-function-from-hazard"><span class="header-section-number">6.1</span> Smooth Survival Function from Hazard</a></li>
+  </ul></li>
+  <li><a href="#left-truncation" id="toc-left-truncation" class="nav-link" data-scroll-target="#left-truncation"><span class="header-section-number">7</span> Left Truncation</a>
+  <ul class="collapse">
+  <li><a href="#channing-house-example" id="toc-channing-house-example" class="nav-link" data-scroll-target="#channing-house-example"><span class="header-section-number">7.1</span> Channing House Example</a></li>
+  <li><a href="#what-do-we-see-from-the-results" id="toc-what-do-we-see-from-the-results" class="nav-link" data-scroll-target="#what-do-we-see-from-the-results"><span class="header-section-number">7.2</span> What do we see from the results?</a></li>
+  </ul></li>
+  <li><a href="#key-takeaways" id="toc-key-takeaways" class="nav-link" data-scroll-target="#key-takeaways"><span class="header-section-number">8</span> Key Takeaways</a>
+  <ul class="collapse">
+  <li><a href="#additional-notes" id="toc-additional-notes" class="nav-link" data-scroll-target="#additional-notes"><span class="header-section-number">8.1</span> Additional Notes</a></li>
+  <li><a href="#exercises" id="toc-exercises" class="nav-link" data-scroll-target="#exercises"><span class="header-section-number">8.2</span> Exercises</a>
+  <ul class="collapse">
+  <li><a href="#exercise-3.1" id="toc-exercise-3.1" class="nav-link" data-scroll-target="#exercise-3.1"><span class="header-section-number">8.2.1</span> Exercise 3.1</a></li>
+  <li><a href="#exercise-3.2" id="toc-exercise-3.2" class="nav-link" data-scroll-target="#exercise-3.2"><span class="header-section-number">8.2.2</span> Exercise 3.2</a></li>
+  <li><a href="#exercise-3.3" id="toc-exercise-3.3" class="nav-link" data-scroll-target="#exercise-3.3"><span class="header-section-number">8.2.3</span> Exercise 3.3</a></li>
+  <li><a href="#exercise-3.4" id="toc-exercise-3.4" class="nav-link" data-scroll-target="#exercise-3.4"><span class="header-section-number">8.2.4</span> Exercise 3.4</a></li>
+  </ul></li>
+  </ul></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="chapter3.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Nonparametric Survival Curve Estimation | Confidence Intervals | Left Truncation |</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Eric Delmelle | Lehigh University </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<ul>
+<li>Many possible hazard function shapes when using parametric models
+<ul>
+<li>Challenge: which parametric family to choose?<br>
+</li>
+<li>For human/animal survival, no single family always fits well</li>
+</ul></li>
+<li>Nonparametric estimators of survival function
+<ul>
+<li>Already discussed</li>
+<li>Most common: <strong>Kaplan–Meier (product-limit) estimator</strong><br>
+</li>
+<li>Confidence intervals; mean and median survival</li>
+<li>Kernel smoothing</li>
+<li><strong>data</strong>: Gastric Cancer Survival dataset</li>
+</ul></li>
+<li>Left truncation
+<ul>
+<li><strong>data</strong>: Channing House Retirement dataset</li>
+</ul></li>
+</ul>
+</section>
+<section id="nonparametric-estimation-of-the-survival-function" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Nonparametric Estimation of the Survival Function</h1>
+<section id="the-kaplan-meier-km-estimator" class="level2" data-number="2.1">
+<h2 data-number="2.1" class="anchored" data-anchor-id="the-kaplan-meier-km-estimator"><span class="header-section-number">2.1</span> The Kaplan-Meier (KM) Estimator</h2>
+<ul>
+<li>(we have seen this already)</li>
+<li>Product over the failure times of the conditional probabilities of surviving to the next failure time.</li>
+</ul>
+<p><span class="math display">\[\hat{S}(t) = \prod_{t_i \leq t} (1 - \hat{q}_i) = \prod_{t_i \leq t} \left(1 - \frac{d_i}{n_i}\right)\]</span></p>
+<ul>
+<li>where <span class="math inline">\(n_i\)</span> is the number of subjects at risk at time <span class="math inline">\(t_i\)</span>, and <span class="math inline">\(d_i\)</span> is the number of individuals who fail at that time.</li>
+</ul>
+</section>
+<section id="example-data-and-calculation-gastric-cancer" class="level2" data-number="2.2">
+<h2 data-number="2.2" class="anchored" data-anchor-id="example-data-and-calculation-gastric-cancer"><span class="header-section-number">2.2</span> Example Data and Calculation: Gastric Cancer</h2>
+<ul>
+<li>Let’s work through the Kaplan-Meier calculation using the <strong>Gastric Cancer</strong> Survival Data (see page 6 in the book, section 1.4, example 1.2 - Xelox in patients with advanced gastric center).</li>
+<li>The data is loaded with the <code>asaur</code> package</li>
+<li>A single-arm trial = everyone in the study gets the same treatment (here, XELOX). No control group or comparison arm (like placebo or standard therapy).</li>
+<li>Phase II - mid-stage study where all participants get XELOX chemo; researchers tracked survival outcomes to decide if it’s worth moving to a larger, controlled Phase III trial.</li>
+<li>The <strong>Delta</strong> variable tell us whether the event occurred or not (1=dead).</li>
+<li>Note the confidence intervals are set to False here.</li>
+<li>n = 48 → total number of patients in the dataset (the trial enrolled 48).</li>
+<li>Events = 32 → the number of patients who experienced the event of interest.</li>
+<li>About 10.3 months, 50% of patients had experienced progression or death.</li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load required libraries</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(survival)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(muhaz)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(asaur)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(boot)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># see example 1.2</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>timeMonths <span class="ot">&lt;-</span> gastricXelox<span class="sc">$</span>timeWeeks<span class="sc">*</span><span class="dv">7</span><span class="sc">/</span><span class="fl">30.25</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>delta <span class="ot">&lt;-</span> gastricXelox<span class="sc">$</span>delta</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Create survival object</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>result.km <span class="ot">&lt;-</span> <span class="fu">survfit</span>(<span class="fu">Surv</span>(timeMonths, delta) <span class="sc">~</span> <span class="dv">1</span>, <span class="at">conf.type=</span><span class="st">"none"</span>)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(result.km)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Call: survfit(formula = Surv(timeMonths, delta) ~ 1, conf.type = "none")
+
+      n events median
+[1,] 48     32   10.3</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(result.km, <span class="at">conf.int=</span>F, <span class="at">mark=</span><span class="st">"|"</span>, <span class="at">xlab=</span><span class="st">"Time in months"</span>,<span class="at">ylab=</span><span class="st">"Survival probability"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="chapter3_files/figure-html/setup-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</section>
+<section id="confidence-intervals-ci" class="level2" data-number="2.3">
+<h2 data-number="2.3" class="anchored" data-anchor-id="confidence-intervals-ci"><span class="header-section-number">2.3</span> Confidence Intervals (CI)</h2>
+<ul>
+<li>There are several approaches to constructing confidence intervals for the Kaplan-Meier estimator.</li>
+<li>Each with different properties and advantages.</li>
+<li>Plain (can be negative!!!)</li>
+<li>Log</li>
+<li>Log-Log</li>
+</ul>
+<section id="plain-linear-confidence-intervals" class="level3" data-number="2.3.1">
+<h3 data-number="2.3.1" class="anchored" data-anchor-id="plain-linear-confidence-intervals"><span class="header-section-number">2.3.1</span> Plain (Linear) Confidence Intervals</h3>
+<p>The most straightforward approach uses the delta method to obtain the variance of <span class="math inline">\(\hat{S}(t)\)</span> directly:</p>
+<p><span class="math inline">\(\text{var}[\hat{S}(t)] \approx [\hat{S}(t)]^2 \sum_{t_i \leq t} \frac{d_i}{n_i(n_i - d_i)}\)</span></p>
+<p>This leads to the <strong>plain confidence interval</strong>: <span class="math inline">\(\hat{S}(t) \pm z_{\alpha/2} \sqrt{\text{var}[\hat{S}(t)]}\)</span></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>result.km.plain <span class="ot">&lt;-</span> <span class="fu">survfit</span>(<span class="fu">Surv</span>(timeMonths, delta) <span class="sc">~</span> <span class="dv">1</span>, <span class="at">conf.type =</span> <span class="st">"plain"</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot comparison</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(result.km.plain, <span class="at">conf.int =</span> <span class="cn">TRUE</span>, <span class="at">col =</span> <span class="st">"red"</span>, </span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">"Time in years"</span>, <span class="at">ylab =</span> <span class="st">"Survival probability"</span>,</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">"Plain Confidence Intervals"</span>)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="fu">legend</span>(<span class="st">"topright"</span>, </span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>       <span class="at">legend =</span> <span class="fu">c</span>(<span class="st">"Plain"</span>),</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>       <span class="at">col =</span> <span class="fu">c</span>(<span class="st">"red"</span>),</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>       <span class="at">lty =</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="chapter3_files/figure-html/plain-ci-only-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Plain Confidence Intervals</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="problems-with-plain-confidence-intervals" class="level3" data-number="2.3.2">
+<h3 data-number="2.3.2" class="anchored" data-anchor-id="problems-with-plain-confidence-intervals"><span class="header-section-number">2.3.2</span> Problems with Plain Confidence Intervals</h3>
+<p>The plain confidence interval has a fundamental problem: <strong>it can extend below 0 or above 1</strong>, which is nonsensical for probabilities. This occurs because:</p>
+<ul>
+<li>The normal approximation may be poor, especially with small sample sizes</li>
+<li>The survival function is bounded between 0 and 1, but the normal distribution is unbounded</li>
+<li>The distribution of <span class="math inline">\(\hat{S}(t)\)</span> can be quite skewed, especially near the tails</li>
+</ul>
+</section>
+<section id="log-transformation" class="level3" data-number="2.3.3">
+<h3 data-number="2.3.3" class="anchored" data-anchor-id="log-transformation"><span class="header-section-number">2.3.3</span> Log Transformation</h3>
+<ul>
+<li>An improvement uses the log transformation of <span class="math inline">\(\hat{S}(t)\)</span>:</li>
+</ul>
+<p><span class="math inline">\(\text{var}[\log \hat{S}(t)] = \sum_{t_i \leq t} \frac{d_i}{n_i(n_i - d_i)}\)</span></p>
+<ul>
+<li><p>The log confidence interval is: <span class="math inline">\(\exp\left\{\log[\hat{S}(t)] \pm z_{\alpha/2} \sqrt{\text{var}[\log \hat{S}(t)]}\right\}\)</span></p></li>
+<li><p>This ensures the confidence interval stays within <span class="math inline">\((0,1]\)</span></p></li>
+<li><p>Can still have issues when <span class="math inline">\(\hat{S}(t)\)</span> approaches 1.</p></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Demonstrate different confidence interval types</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>result.km.plain <span class="ot">&lt;-</span> <span class="fu">survfit</span>(<span class="fu">Surv</span>(timeMonths, delta) <span class="sc">~</span> <span class="dv">1</span>, <span class="at">conf.type =</span> <span class="st">"plain"</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>result.km.log <span class="ot">&lt;-</span> <span class="fu">survfit</span>(<span class="fu">Surv</span>(timeMonths, delta) <span class="sc">~</span> <span class="dv">1</span>, <span class="at">conf.type =</span> <span class="st">"log"</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot comparison</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(result.km.plain, <span class="at">conf.int =</span> <span class="cn">TRUE</span>, <span class="at">col =</span> <span class="st">"red"</span>, </span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">"Time in years"</span>, <span class="at">ylab =</span> <span class="st">"Survival probability"</span>,</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">"Comparison of Confidence Interval Types"</span>)</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="fu">lines</span>(result.km.log, <span class="at">conf.int =</span> <span class="cn">TRUE</span>, <span class="at">col =</span> <span class="st">"blue"</span>)</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="fu">legend</span>(<span class="st">"topright"</span>, </span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>       <span class="at">legend =</span> <span class="fu">c</span>(<span class="st">"Plain"</span>, <span class="st">"Log"</span>),</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>       <span class="at">col =</span> <span class="fu">c</span>(<span class="st">"red"</span>, <span class="st">"blue"</span>),</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>       <span class="at">lty =</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="chapter3_files/figure-html/plain-log-comparison-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Plain vs Log Confidence Intervals</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="complementary-log-log-transformation-most-satisfying" class="level3" data-number="2.3.4">
+<h3 data-number="2.3.4" class="anchored" data-anchor-id="complementary-log-log-transformation-most-satisfying"><span class="header-section-number">2.3.4</span> Complementary Log-Log Transformation (Most Satisfying)</h3>
+<ul>
+<li>The <strong>complementary log-log transformation</strong> is generally preferred because it has the best statistical properties:</li>
+</ul>
+<p><span class="math inline">\(\text{var}[\log[-\log \hat{S}(t)]] \approx \frac{1}{[\log \hat{S}(t)]^2} \sum_{t_i \leq t} \frac{d_i}{n_i(n_i - d_i)}\)</span></p>
+<ul>
+<li>The confidence interval becomes: <span class="math inline">\(\exp\left\{-\exp\left[\log(-\log[\hat{S}(t)]) \pm z_{\alpha/2} \sqrt{\text{var}[\log[-\log \hat{S}(t)]]}\right]\right\}\)</span></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Demonstrate different confidence interval types</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>result.km.plain <span class="ot">&lt;-</span> <span class="fu">survfit</span>(<span class="fu">Surv</span>(timeMonths, delta) <span class="sc">~</span> <span class="dv">1</span>, <span class="at">conf.type =</span> <span class="st">"plain"</span>)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>result.km.log <span class="ot">&lt;-</span> <span class="fu">survfit</span>(<span class="fu">Surv</span>(timeMonths, delta) <span class="sc">~</span> <span class="dv">1</span>, <span class="at">conf.type =</span> <span class="st">"log"</span>)</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>result.km.loglog <span class="ot">&lt;-</span> <span class="fu">survfit</span>(<span class="fu">Surv</span>(timeMonths, delta) <span class="sc">~</span> <span class="dv">1</span>, <span class="at">conf.type =</span> <span class="st">"log-log"</span>)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot comparison</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(result.km.plain, <span class="at">conf.int =</span> <span class="cn">TRUE</span>, <span class="at">col =</span> <span class="st">"red"</span>, </span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">"Time in years"</span>, <span class="at">ylab =</span> <span class="st">"Survival probability"</span>,</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">"Comparison of Confidence Interval Types"</span>)</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="fu">lines</span>(result.km.log, <span class="at">conf.int =</span> <span class="cn">TRUE</span>, <span class="at">col =</span> <span class="st">"blue"</span>)</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="fu">lines</span>(result.km.loglog, <span class="at">conf.int =</span> <span class="cn">TRUE</span>, <span class="at">col =</span> <span class="st">"green"</span>)</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="fu">legend</span>(<span class="st">"topright"</span>, </span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>       <span class="at">legend =</span> <span class="fu">c</span>(<span class="st">"Plain"</span>, <span class="st">"Log"</span>, <span class="st">"Log-log"</span>),</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>       <span class="at">col =</span> <span class="fu">c</span>(<span class="st">"red"</span>, <span class="st">"blue"</span>, <span class="st">"green"</span>),</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>       <span class="at">lty =</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="chapter3_files/figure-html/all-ci-comparison-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Comparison of All Confidence Interval Types</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="why-log-log-is-more-satisfying" class="level3" data-number="2.3.5">
+<h3 data-number="2.3.5" class="anchored" data-anchor-id="why-log-log-is-more-satisfying"><span class="header-section-number">2.3.5</span> Why Log-Log is “More Satisfying”</h3>
+<ul>
+<li><strong>Bounded intervals</strong>: Confidence intervals are <strong>always between 0 and 1</strong></li>
+<li><strong>Better symmetry</strong>: The transformation creates more symmetric distributions, making the normal approximation more accurate</li>
+<li><strong>Improved coverage</strong>: Studies show log-log intervals have coverage probabilities closer to the nominal level (e.g., 95%)</li>
+<li><strong>Theoretical justification</strong>: The transformation is related to the cumulative hazard function, which has better asymptotic properties</li>
+<li><strong>Stable behavior</strong>: Performs well even when <span class="math inline">\(\hat{S}(t)\)</span> is close to 0 or 1</li>
+</ul>
+<div class="cell" data-tbl-cap="Confidence Interval Comparison">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Compare the three methods for our example data</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(result.km.plain)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Call: survfit(formula = Surv(timeMonths, delta) ~ 1, conf.type = "plain")
+
+   time n.risk n.event survival std.err lower 95% CI upper 95% CI
+  0.926     48       1    0.979  0.0206        0.939        1.000
+  1.851     47       3    0.917  0.0399        0.838        0.995
+  2.083     44       1    0.896  0.0441        0.809        0.982
+  2.545     43       1    0.875  0.0477        0.781        0.969
+  2.777     42       1    0.854  0.0509        0.754        0.954
+  3.008     41       1    0.833  0.0538        0.728        0.939
+  3.702     40       2    0.792  0.0586        0.677        0.907
+  3.934     38       2    0.750  0.0625        0.628        0.872
+  4.397     36       1    0.729  0.0641        0.603        0.855
+  4.860     35       1    0.708  0.0656        0.580        0.837
+  5.554     34       2    0.667  0.0680        0.533        0.800
+  5.785     32       1    0.646  0.0690        0.511        0.781
+  6.479     31       2    0.604  0.0706        0.466        0.743
+  6.942     29       1    0.583  0.0712        0.444        0.723
+  8.562     28       2    0.542  0.0719        0.401        0.683
+  9.719     26       1    0.521  0.0721        0.380        0.662
+  9.950     25       1    0.500  0.0722        0.359        0.641
+ 10.645     23       1    0.478  0.0722        0.337        0.620
+ 12.264     19       1    0.453  0.0727        0.311        0.596
+ 13.653     16       1    0.425  0.0735        0.281        0.569
+ 13.884     14       1    0.394  0.0742        0.249        0.540
+ 14.810     13       1    0.364  0.0744        0.218        0.510
+ 15.273     12       1    0.334  0.0742        0.188        0.479
+ 17.587     11       1    0.303  0.0734        0.160        0.447
+ 18.050     10       1    0.273  0.0720        0.132        0.414</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"</span><span class="sc">\n</span><span class="st">--- Log transformation ---</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+--- Log transformation ---</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(result.km.log)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Call: survfit(formula = Surv(timeMonths, delta) ~ 1, conf.type = "log")
+
+   time n.risk n.event survival std.err lower 95% CI upper 95% CI
+  0.926     48       1    0.979  0.0206        0.940        1.000
+  1.851     47       3    0.917  0.0399        0.842        0.998
+  2.083     44       1    0.896  0.0441        0.813        0.987
+  2.545     43       1    0.875  0.0477        0.786        0.974
+  2.777     42       1    0.854  0.0509        0.760        0.960
+  3.008     41       1    0.833  0.0538        0.734        0.946
+  3.702     40       2    0.792  0.0586        0.685        0.915
+  3.934     38       2    0.750  0.0625        0.637        0.883
+  4.397     36       1    0.729  0.0641        0.614        0.866
+  4.860     35       1    0.708  0.0656        0.591        0.849
+  5.554     34       2    0.667  0.0680        0.546        0.814
+  5.785     32       1    0.646  0.0690        0.524        0.796
+  6.479     31       2    0.604  0.0706        0.481        0.760
+  6.942     29       1    0.583  0.0712        0.459        0.741
+  8.562     28       2    0.542  0.0719        0.418        0.703
+  9.719     26       1    0.521  0.0721        0.397        0.683
+  9.950     25       1    0.500  0.0722        0.377        0.663
+ 10.645     23       1    0.478  0.0722        0.356        0.643
+ 12.264     19       1    0.453  0.0727        0.331        0.620
+ 13.653     16       1    0.425  0.0735        0.303        0.596
+ 13.884     14       1    0.394  0.0742        0.273        0.570
+ 14.810     13       1    0.364  0.0744        0.244        0.544
+ 15.273     12       1    0.334  0.0742        0.216        0.516
+ 17.587     11       1    0.303  0.0734        0.189        0.487
+ 18.050     10       1    0.273  0.0720        0.163        0.458</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"</span><span class="sc">\n</span><span class="st">--- Log-log transformation ---</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+--- Log-log transformation ---</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(result.km.loglog)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Call: survfit(formula = Surv(timeMonths, delta) ~ 1, conf.type = "log-log")
+
+   time n.risk n.event survival std.err lower 95% CI upper 95% CI
+  0.926     48       1    0.979  0.0206        0.861        0.997
+  1.851     47       3    0.917  0.0399        0.793        0.968
+  2.083     44       1    0.896  0.0441        0.768        0.955
+  2.545     43       1    0.875  0.0477        0.743        0.942
+  2.777     42       1    0.854  0.0509        0.718        0.928
+  3.008     41       1    0.833  0.0538        0.694        0.913
+  3.702     40       2    0.792  0.0586        0.647        0.882
+  3.934     38       2    0.750  0.0625        0.602        0.850
+  4.397     36       1    0.729  0.0641        0.580        0.833
+  4.860     35       1    0.708  0.0656        0.558        0.816
+  5.554     34       2    0.667  0.0680        0.515        0.781
+  5.785     32       1    0.646  0.0690        0.494        0.763
+  6.479     31       2    0.604  0.0706        0.452        0.726
+  6.942     29       1    0.583  0.0712        0.432        0.708
+  8.562     28       2    0.542  0.0719        0.392        0.670
+  9.719     26       1    0.521  0.0721        0.372        0.650
+  9.950     25       1    0.500  0.0722        0.353        0.631
+ 10.645     23       1    0.478  0.0722        0.332        0.610
+ 12.264     19       1    0.453  0.0727        0.308        0.587
+ 13.653     16       1    0.425  0.0735        0.280        0.562
+ 13.884     14       1    0.394  0.0742        0.251        0.535
+ 14.810     13       1    0.364  0.0744        0.223        0.507
+ 15.273     12       1    0.334  0.0742        0.196        0.478
+ 17.587     11       1    0.303  0.0734        0.170        0.449
+ 18.050     10       1    0.273  0.0720        0.145        0.418</code></pre>
+</div>
+</div>
+</section>
+</section>
+</section>
+<section id="finding-the-median-survival" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Finding the Median Survival</h1>
+<ul>
+<li>The median survival time is defined as: <span class="math display">\[\hat{t}_{med} = \inf\{t : \hat{S}(t) \leq 0.5\}\]</span></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Making sure that we actually generate CI</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>result.km <span class="ot">&lt;-</span> <span class="fu">survfit</span>(<span class="fu">Surv</span>(timeMonths, delta) <span class="sc">~</span> <span class="dv">1</span>, <span class="at">conf.type=</span><span class="st">"log-log"</span>)</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(result.km)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Call: survfit(formula = Surv(timeMonths, delta) ~ 1, conf.type = "log-log")
+
+      n events median 0.95LCL 0.95UCL
+[1,] 48     32   10.3    5.79    15.3</code></pre>
+</div>
+</div>
+<p>To find a <span class="math inline">\(1-\alpha\)</span> confidence interval for the median, we use:</p>
+<p><span class="math display">\[-z_{\alpha/2} \leq \frac{g\{\hat{S}(t)\} - g(0.5)}{\sqrt{\text{var}[g\{\hat{S}(t)\}]}} \leq z_{\alpha/2}\]</span></p>
+<p>where <span class="math inline">\(g(u) = \log[-\log(u)]\)</span> is the complementary log-log transformation.</p>
+</section>
+<section id="median-follow-up-time" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Median Follow-Up Time</h1>
+<ul>
+<li>One measure of the quality of a clinical trial is the duration of follow-up.</li>
+<li>The “potential” median survival uses the “reverse” Kaplan-Meier method:</li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Reverse censoring indicators</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>delta.followup <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">-</span> delta</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute reverse Kaplan-Meier</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>reverse_km <span class="ot">&lt;-</span> <span class="fu">survfit</span>(<span class="fu">Surv</span>(timeMonths, delta.followup) <span class="sc">~</span> <span class="dv">1</span>)</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(reverse_km)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Call: survfit(formula = Surv(timeMonths, delta.followup) ~ 1)
+
+      n events median 0.95LCL 0.95UCL
+[1,] 48     16   27.8    21.1    50.2</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Compare with simple median</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Simple median follow-up:"</span>, <span class="fu">median</span>(timeMonths), <span class="st">"months</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Simple median follow-up: 9.950413 months</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Potential follow-up (reverse KM):"</span>, reverse_km<span class="sc">$</span>median, <span class="st">"months</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Potential follow-up (reverse KM): months</code></pre>
+</div>
+</div>
+</section>
+<section id="quantiles" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Quantiles</h1>
+<ul>
+<li>What is the survival probabilities</li>
+<li>First and third quartiles</li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Quantiles for gastric cancer data</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a><span class="fu">quantile</span>(result.km, <span class="at">probs =</span> <span class="fu">c</span>(<span class="fl">0.25</span>, <span class="fl">0.75</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>$quantile
+      25       75 
+4.165289       NA 
+
+$lower
+       25        75 
+ 2.545455 14.809917 
+
+$upper
+      25       75 
+6.479339       NA </code></pre>
+</div>
+</div>
+<ul>
+<li>and remember the other question:</li>
+<li>what is my probability to survive at 5 years?</li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>result.km <span class="ot">&lt;-</span> <span class="fu">survfit</span>(<span class="fu">Surv</span>(timeMonths, delta) <span class="sc">~</span> <span class="dv">1</span>, <span class="at">conf.type=</span><span class="st">"log-log"</span>)</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(result.km, <span class="at">times =</span> <span class="dv">5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Call: survfit(formula = Surv(timeMonths, delta) ~ 1, conf.type = "log-log")
+
+ time n.risk n.event survival std.err lower 95% CI upper 95% CI
+    5     34      14    0.708  0.0656        0.558        0.816</code></pre>
+</div>
+</div>
+</section>
+<section id="smoothed-hazard-and-survival-function-estimates-kernel" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Smoothed Hazard and Survival Function Estimates (Kernel)</h1>
+<ul>
+<li>The hazard function estimate at failure times is quite unstable.</li>
+<li>A kernel smoother provides a better visualization.</li>
+<li>This is not a replacement for parametric distribution like <code>exponential</code> or <code>Weibull</code>, but provides an interesting visualization</li>
+</ul>
+<p><span class="math display">\[\hat{h}(t) = \frac{1}{b} \sum_{i=1}^D K\left(\frac{t - t_{(i)}}{b}\right) \frac{d_i}{n_i}\]</span></p>
+<p>where <span class="math inline">\(K(u)\)</span> is a kernel function (e.g., Epanechnikov kernel: <span class="math inline">\(K(u) = \frac{3}{4}(1-u^2)\)</span> for <span class="math inline">\(-1 \leq u \leq 1\)</span>).</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Piecewise exponential hazard estimate</span></span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>result.pe5 <span class="ot">&lt;-</span> <span class="fu">pehaz</span>(timeMonths, delta, <span class="at">width =</span> <span class="dv">5</span>, <span class="at">max.time =</span> <span class="dv">20</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+max.time= 20
+width= 5
+nbins= 4</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>result.pe1 <span class="ot">&lt;-</span> <span class="fu">pehaz</span>(timeMonths, delta, <span class="at">width =</span> <span class="dv">1</span>, <span class="at">max.time =</span> <span class="dv">20</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+max.time= 20
+width= 1
+nbins= 20</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot piecewise estimates</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(result.pe5, </span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>     <span class="at">ylim =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.15</span>), </span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>     <span class="at">col =</span> <span class="st">"black"</span>,</span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">"Time"</span>,</span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>     <span class="at">ylab =</span> <span class="st">"Hazard Rate"</span>,</span>
+<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">"Hazard Function Estimates"</span>)</span>
+<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a><span class="fu">lines</span>(result.pe1, <span class="at">col =</span> <span class="st">"gray"</span>)</span>
+<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-10"><a href="#cb33-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Smooth hazard estimate</span></span>
+<span id="cb33-11"><a href="#cb33-11" aria-hidden="true" tabindex="-1"></a>result.smooth <span class="ot">&lt;-</span> <span class="fu">muhaz</span>(timeMonths, delta, </span>
+<span id="cb33-12"><a href="#cb33-12" aria-hidden="true" tabindex="-1"></a>                       <span class="at">bw.smooth =</span> <span class="dv">20</span>,</span>
+<span id="cb33-13"><a href="#cb33-13" aria-hidden="true" tabindex="-1"></a>                       <span class="at">b.cor =</span> <span class="st">"left"</span>, </span>
+<span id="cb33-14"><a href="#cb33-14" aria-hidden="true" tabindex="-1"></a>                       <span class="at">max.time =</span> <span class="dv">20</span>)</span>
+<span id="cb33-15"><a href="#cb33-15" aria-hidden="true" tabindex="-1"></a><span class="fu">lines</span>(result.smooth, <span class="at">col =</span> <span class="st">"blue"</span>, <span class="at">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb33-16"><a href="#cb33-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-17"><a href="#cb33-17" aria-hidden="true" tabindex="-1"></a><span class="fu">legend</span>(<span class="st">"topright"</span>, </span>
+<span id="cb33-18"><a href="#cb33-18" aria-hidden="true" tabindex="-1"></a>       <span class="at">legend =</span> <span class="fu">c</span>(<span class="st">"5-month intervals"</span>, <span class="st">"1-month intervals"</span>, <span class="st">"Smoothed"</span>),</span>
+<span id="cb33-19"><a href="#cb33-19" aria-hidden="true" tabindex="-1"></a>       <span class="at">col =</span> <span class="fu">c</span>(<span class="st">"black"</span>, <span class="st">"gray"</span>, <span class="st">"blue"</span>),</span>
+<span id="cb33-20"><a href="#cb33-20" aria-hidden="true" tabindex="-1"></a>       <span class="at">lty =</span> <span class="dv">1</span>,</span>
+<span id="cb33-21"><a href="#cb33-21" aria-hidden="true" tabindex="-1"></a>       <span class="at">lwd =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="chapter3_files/figure-html/smoothed-hazard-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Smoothed Hazard Function Estimate</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<section id="smooth-survival-function-from-hazard" class="level2" data-number="6.1">
+<h2 data-number="6.1" class="anchored" data-anchor-id="smooth-survival-function-from-hazard"><span class="header-section-number">6.1</span> Smooth Survival Function from Hazard</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Extract smoothed hazard estimates</span></span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>haz <span class="ot">&lt;-</span> result.smooth<span class="sc">$</span>haz.est</span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>times <span class="ot">&lt;-</span> result.smooth<span class="sc">$</span>est.grid</span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute smooth survival function</span></span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a>surv_smooth <span class="ot">&lt;-</span> <span class="fu">exp</span>(<span class="sc">-</span><span class="fu">cumsum</span>(haz[<span class="dv">1</span><span class="sc">:</span>(<span class="fu">length</span>(haz)<span class="sc">-</span><span class="dv">1</span>)] <span class="sc">*</span> <span class="fu">diff</span>(times)))</span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-8"><a href="#cb34-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot comparison</span></span>
+<span id="cb34-9"><a href="#cb34-9" aria-hidden="true" tabindex="-1"></a>result.km.compare <span class="ot">&lt;-</span> <span class="fu">survfit</span>(<span class="fu">Surv</span>(timeMonths, delta) <span class="sc">~</span> <span class="dv">1</span>, <span class="at">conf.type =</span> <span class="st">"none"</span>)</span>
+<span id="cb34-10"><a href="#cb34-10" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(result.km.compare, </span>
+<span id="cb34-11"><a href="#cb34-11" aria-hidden="true" tabindex="-1"></a>     <span class="at">conf.int =</span> <span class="cn">FALSE</span>, </span>
+<span id="cb34-12"><a href="#cb34-12" aria-hidden="true" tabindex="-1"></a>     <span class="at">mark =</span> <span class="st">"|"</span>, </span>
+<span id="cb34-13"><a href="#cb34-13" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">"Time in months"</span>,</span>
+<span id="cb34-14"><a href="#cb34-14" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlim =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">30</span>), </span>
+<span id="cb34-15"><a href="#cb34-15" aria-hidden="true" tabindex="-1"></a>     <span class="at">ylab =</span> <span class="st">"Survival probability"</span>,</span>
+<span id="cb34-16"><a href="#cb34-16" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">"Kaplan-Meier vs Smoothed Survival Estimates"</span>)</span>
+<span id="cb34-17"><a href="#cb34-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-18"><a href="#cb34-18" aria-hidden="true" tabindex="-1"></a><span class="fu">lines</span>(surv_smooth <span class="sc">~</span> times[<span class="dv">1</span><span class="sc">:</span>(<span class="fu">length</span>(times) <span class="sc">-</span> <span class="dv">1</span>)], <span class="at">col =</span> <span class="st">"red"</span>, <span class="at">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb34-19"><a href="#cb34-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-20"><a href="#cb34-20" aria-hidden="true" tabindex="-1"></a><span class="fu">legend</span>(<span class="st">"topright"</span>, </span>
+<span id="cb34-21"><a href="#cb34-21" aria-hidden="true" tabindex="-1"></a>       <span class="at">legend =</span> <span class="fu">c</span>(<span class="st">"Kaplan-Meier"</span>, <span class="st">"Smoothed"</span>),</span>
+<span id="cb34-22"><a href="#cb34-22" aria-hidden="true" tabindex="-1"></a>       <span class="at">col =</span> <span class="fu">c</span>(<span class="st">"black"</span>, <span class="st">"red"</span>),</span>
+<span id="cb34-23"><a href="#cb34-23" aria-hidden="true" tabindex="-1"></a>       <span class="at">lty =</span> <span class="dv">1</span>,</span>
+<span id="cb34-24"><a href="#cb34-24" aria-hidden="true" tabindex="-1"></a>       <span class="at">lwd =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="chapter3_files/figure-html/smooth-survival-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Comparison of Kaplan-Meier and Smoothed Survival Estimates</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="left-truncation" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Left Truncation</h1>
+<ul>
+<li>Left truncation occurs when subjects can only be observed after a certain time point.</li>
+<li>Requires modification of the Kaplan-Meier estimator where subjects enter the risk set at their truncation time.</li>
+</ul>
+<section id="channing-house-example" class="level2" data-number="7.1">
+<h2 data-number="7.1" class="anchored" data-anchor-id="channing-house-example"><span class="header-section-number">7.1</span> Channing House Example</h2>
+<ul>
+<li>Collection of survival data from the Channing House retirement home in Palo Alto, California, collected between 1964 and 1975.</li>
+<li>It records the age at entry and at death or exit (due to leaving or being alive at the study’s end) for 97 men and 365 women, focusing on differences in survival between sexes after accounting for age.</li>
+<li>The data is used for survival analysis and features left truncation (residents entered at different ages, so their pre-Channing House lifetimes were not observed).</li>
+<li>Also right censoring (some residents were still alive at the study’s end).</li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="co"># We will use the channing dataset - loaded with 'boot' earlier</span></span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert ages from months to years</span></span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>channing<span class="sc">$</span>entryYears <span class="ot">&lt;-</span> channing<span class="sc">$</span>entry <span class="sc">/</span> <span class="dv">12</span></span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a>channing<span class="sc">$</span>exitYears <span class="ot">&lt;-</span> channing<span class="sc">$</span>exit <span class="sc">/</span> <span class="dv">12</span></span>
+<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Check sex coding</span></span>
+<span id="cb35-9"><a href="#cb35-9" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Sex coding in dataset:</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Sex coding in dataset:</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="co">#print(table(channing$sex))</span></span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter for males using text matching</span></span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Age range at entry:"</span>, <span class="fu">range</span>(channing<span class="sc">$</span>entryYears), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Age range at entry: 61.08333 95 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Age range at exit:"</span>, <span class="fu">range</span>(channing<span class="sc">$</span>exitYears), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Age range at exit: 64.75 100.5833 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Standard Kaplan-Meier with left truncation</span></span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>result.km.standard <span class="ot">&lt;-</span> <span class="fu">survfit</span>(<span class="fu">Surv</span>(entryYears, exitYears, cens, <span class="at">type =</span> <span class="st">"counting"</span>) <span class="sc">~</span> <span class="dv">1</span>, </span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>                              <span class="at">data =</span> channing)</span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb41-6"><a href="#cb41-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Conditional on reaching age 68</span></span>
+<span id="cb41-7"><a href="#cb41-7" aria-hidden="true" tabindex="-1"></a>result.km<span class="fl">.68</span> <span class="ot">&lt;-</span> <span class="fu">survfit</span>(<span class="fu">Surv</span>(entryYears, exitYears, cens, <span class="at">type =</span> <span class="st">"counting"</span>) <span class="sc">~</span> <span class="dv">1</span>, </span>
+<span id="cb41-8"><a href="#cb41-8" aria-hidden="true" tabindex="-1"></a>                        <span class="at">data =</span> channing,</span>
+<span id="cb41-9"><a href="#cb41-9" aria-hidden="true" tabindex="-1"></a>                        <span class="at">start.time =</span> <span class="dv">68</span>)</span>
+<span id="cb41-10"><a href="#cb41-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb41-11"><a href="#cb41-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot all three estimates</span></span>
+<span id="cb41-12"><a href="#cb41-12" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(result.km.standard, </span>
+<span id="cb41-13"><a href="#cb41-13" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlim =</span> <span class="fu">c</span>(<span class="dv">64</span>, <span class="dv">101</span>), </span>
+<span id="cb41-14"><a href="#cb41-14" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">"Age"</span>,</span>
+<span id="cb41-15"><a href="#cb41-15" aria-hidden="true" tabindex="-1"></a>     <span class="at">ylab =</span> <span class="st">"Survival probability"</span>, </span>
+<span id="cb41-16"><a href="#cb41-16" aria-hidden="true" tabindex="-1"></a>     <span class="at">conf.int =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb41-17"><a href="#cb41-17" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">"Survival Estimates for Channing House Data (Males)"</span>)</span>
+<span id="cb41-18"><a href="#cb41-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb41-19"><a href="#cb41-19" aria-hidden="true" tabindex="-1"></a><span class="fu">lines</span>(result.km<span class="fl">.68</span>, <span class="at">col =</span> <span class="st">"green"</span>, <span class="at">conf.int =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb41-20"><a href="#cb41-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb41-21"><a href="#cb41-21" aria-hidden="true" tabindex="-1"></a><span class="fu">legend</span>(<span class="st">"topright"</span>, </span>
+<span id="cb41-22"><a href="#cb41-22" aria-hidden="true" tabindex="-1"></a>       <span class="at">legend =</span> <span class="fu">c</span>(<span class="st">"KM"</span>,  <span class="st">"KM 68 and older"</span>),</span>
+<span id="cb41-23"><a href="#cb41-23" aria-hidden="true" tabindex="-1"></a>       <span class="at">lty =</span> <span class="dv">1</span>, </span>
+<span id="cb41-24"><a href="#cb41-24" aria-hidden="true" tabindex="-1"></a>       <span class="at">col =</span> <span class="fu">c</span>(<span class="st">"black"</span>, <span class="st">"green"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="chapter3_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Print summaries</span></span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"</span><span class="sc">\n</span><span class="st">=== Standard KM with left truncation ===</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+=== Standard KM with left truncation ===</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(result.km.standard)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Call: survfit(formula = Surv(entryYears, exitYears, cens, type = "counting") ~ 
+    1, data = channing)
+
+   5 observations deleted due to missingness 
+     records n.max n.start events median 0.95LCL 0.95UCL
+[1,]     457   202      11    175   82.7    74.8    85.8</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"</span><span class="sc">\n</span><span class="st">=== KM conditional on age 68+ ===</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+=== KM conditional on age 68+ ===</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(result.km<span class="fl">.68</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Call: survfit(formula = Surv(entryYears, exitYears, cens, type = "counting") ~ 
+    1, data = channing, start.time = 68)
+
+   5 observations deleted due to missingness 
+     records n.max n.start events median 0.95LCL 0.95UCL
+[1,]     451   202      36    172   84.9    83.8    86.7</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove rows with NA values in key variables</span></span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a>channing <span class="ot">&lt;-</span> channing[<span class="fu">complete.cases</span>(channing<span class="sc">$</span>entryYears, channing<span class="sc">$</span>exitYears, channing<span class="sc">$</span>cens), ]</span>
+<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-4"><a href="#cb50-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Check for problematic observations where exit &lt;= entry</span></span>
+<span id="cb50-5"><a href="#cb50-5" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Observations where exit &lt;= entry:</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Observations where exit &lt;= entry:</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb52"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a>problematic <span class="ot">&lt;-</span> channing<span class="sc">$</span>exitYears <span class="sc">&lt;=</span> channing<span class="sc">$</span>entryYears</span>
+<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">sum</span>(problematic, <span class="at">na.rm =</span> <span class="cn">TRUE</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 5</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove problematic observations</span></span>
+<span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a>channing <span class="ot">&lt;-</span> channing[channing<span class="sc">$</span>exitYears <span class="sc">&gt;</span> channing<span class="sc">$</span>entryYears, ]</span>
+<span id="cb54-3"><a href="#cb54-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb54-4"><a href="#cb54-4" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Remaining observations after cleaning:"</span>, <span class="fu">nrow</span>(channing), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Remaining observations after cleaning: 457 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb56"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create age group based on entry age</span></span>
+<span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a>channing<span class="sc">$</span>ageGroup <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(channing<span class="sc">$</span>entryYears <span class="sc">&gt;=</span> <span class="dv">75</span>, <span class="st">"75+ at entry"</span>, <span class="st">"Under 75 at entry"</span>)</span>
+<span id="cb56-3"><a href="#cb56-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb56-4"><a href="#cb56-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Check the distribution</span></span>
+<span id="cb56-5"><a href="#cb56-5" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Age group distribution:</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Age group distribution:</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb58"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">table</span>(channing<span class="sc">$</span>ageGroup))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+     75+ at entry Under 75 at entry 
+              231               226 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb60"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Survival analysis by age group with left truncation</span></span>
+<span id="cb60-2"><a href="#cb60-2" aria-hidden="true" tabindex="-1"></a>result.km.byage <span class="ot">&lt;-</span> <span class="fu">survfit</span>(<span class="fu">Surv</span>(entryYears, exitYears, cens, <span class="at">type =</span> <span class="st">"counting"</span>) <span class="sc">~</span> ageGroup, </span>
+<span id="cb60-3"><a href="#cb60-3" aria-hidden="true" tabindex="-1"></a>                           <span class="at">data =</span> channing)</span>
+<span id="cb60-4"><a href="#cb60-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-5"><a href="#cb60-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot comparison</span></span>
+<span id="cb60-6"><a href="#cb60-6" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(result.km.byage, </span>
+<span id="cb60-7"><a href="#cb60-7" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlim =</span> <span class="fu">c</span>(<span class="dv">64</span>, <span class="dv">101</span>), </span>
+<span id="cb60-8"><a href="#cb60-8" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">"Age"</span>,</span>
+<span id="cb60-9"><a href="#cb60-9" aria-hidden="true" tabindex="-1"></a>     <span class="at">ylab =</span> <span class="st">"Survival probability"</span>, </span>
+<span id="cb60-10"><a href="#cb60-10" aria-hidden="true" tabindex="-1"></a>     <span class="at">conf.int =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb60-11"><a href="#cb60-11" aria-hidden="true" tabindex="-1"></a>     <span class="at">col =</span> <span class="fu">c</span>(<span class="st">"red"</span>, <span class="st">"blue"</span>),</span>
+<span id="cb60-12"><a href="#cb60-12" aria-hidden="true" tabindex="-1"></a>     <span class="at">lty =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>),</span>
+<span id="cb60-13"><a href="#cb60-13" aria-hidden="true" tabindex="-1"></a>     <span class="at">lwd =</span> <span class="dv">2</span>,</span>
+<span id="cb60-14"><a href="#cb60-14" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">"Survival by Entry Age: Channing House Data"</span>)</span>
+<span id="cb60-15"><a href="#cb60-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb60-16"><a href="#cb60-16" aria-hidden="true" tabindex="-1"></a><span class="fu">legend</span>(<span class="st">"topright"</span>, </span>
+<span id="cb60-17"><a href="#cb60-17" aria-hidden="true" tabindex="-1"></a>       <span class="at">legend =</span> <span class="fu">c</span>(<span class="st">"Under 75 at entry"</span>, <span class="st">"75+ at entry"</span>),</span>
+<span id="cb60-18"><a href="#cb60-18" aria-hidden="true" tabindex="-1"></a>       <span class="at">col =</span> <span class="fu">c</span>(<span class="st">"red"</span>, <span class="st">"blue"</span>),</span>
+<span id="cb60-19"><a href="#cb60-19" aria-hidden="true" tabindex="-1"></a>       <span class="at">lty =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>),</span>
+<span id="cb60-20"><a href="#cb60-20" aria-hidden="true" tabindex="-1"></a>       <span class="at">lwd =</span> <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="chapter3_files/figure-html/75%20years%20group-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb61"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Print summaries for each group</span></span>
+<span id="cb61-2"><a href="#cb61-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"</span><span class="sc">\n</span><span class="st">=== Survival by Entry Age Group ===</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+=== Survival by Entry Age Group ===</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb63"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(result.km.byage)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Call: survfit(formula = Surv(entryYears, exitYears, cens, type = "counting") ~ 
+    ageGroup, data = channing)
+
+                           records n.max n.start events median 0.95LCL 0.95UCL
+ageGroup=75+ at entry          231   125      25    111   86.8    85.6    88.7
+ageGroup=Under 75 at entry     226   172      11     64   82.4    74.8      NA</code></pre>
+</div>
+</div>
+</section>
+<section id="what-do-we-see-from-the-results" class="level2" data-number="7.2">
+<h2 data-number="7.2" class="anchored" data-anchor-id="what-do-we-see-from-the-results"><span class="header-section-number">7.2</span> What do we see from the results?</h2>
+<ul>
+<li>231 people entered at 75+, 226 entered under 75 (well-balanced groups)</li>
+<li>Median survival age: 86.8 years for 75+ entry group vs 82.4 years for under 75 group</li>
+<li>More events (deaths) in the 75+ group (111 vs 64)</li>
+<li>Be careful!!!</li>
+<li>Left truncation can create complex interpretational challenges in survival analysis</li>
+<li>The “better” survival in the 75+ group might reflect selection effects rather than true differences in longevity.</li>
+<li><strong>Selection bias</strong>: People who entered at 75+ had to survive to at least 75 to be observed, so they represent a subset who were already “survivors”</li>
+<li><strong>Different risk periods</strong>: The under 75 group includes people who entered much younger and were observed through more of their life course</li>
+<li><strong>Survivor effect</strong>: The 75+ entry group might represent individuals with particularly good health/genetics who lived long enough to enter the retirement home at advanced ages</li>
+</ul>
+</section>
+</section>
+<section id="key-takeaways" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Key Takeaways</h1>
+<ol type="1">
+<li><strong>Kaplan-Meier estimator</strong> is the most widely used nonparametric survival function estimator</li>
+<li><strong>Confidence intervals</strong> should use the complementary log-log transformation for better properties</li>
+<li><strong>Median survival</strong> is the time when the survival function first drops to 0.5 or below</li>
+<li><strong>Smoothed hazard functions</strong> provide better visualization than step functions</li>
+<li><strong>Left truncation</strong> requires careful handling to avoid bias in survival estimates</li>
+</ol>
+<section id="additional-notes" class="level2" data-number="8.1">
+<h2 data-number="8.1" class="anchored" data-anchor-id="additional-notes"><span class="header-section-number">8.1</span> Additional Notes</h2>
+<ol type="1">
+<li>The <code>bshazard</code> package provides B-spline based smoothing for hazard functions</li>
+<li>Other percentiles can be estimated similarly to the median using: <span class="math display">\[\hat{t}_p = \inf\{t : \hat{S}(t) \leq 1-p\}\]</span></li>
+<li>Simultaneous confidence bands are available in the <code>kmconfband</code> package</li>
+<li>Right truncation is more complex and requires specialized methods like those in the <code>DTDA</code> package</li>
+</ol>
+</section>
+<section id="exercises" class="level2" data-number="8.2">
+<h2 data-number="8.2" class="anchored" data-anchor-id="exercises"><span class="header-section-number">8.2</span> Exercises</h2>
+<section id="exercise-3.1" class="level3" data-number="8.2.1">
+<h3 data-number="8.2.1" class="anchored" data-anchor-id="exercise-3.1"><span class="header-section-number">8.2.1</span> Exercise 3.1</h3>
+<p>Find the median survival and 95% confidence interval from the example data. Explain why the upper limit might be undefined.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb65"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Median survival from our example</span></span>
+<span id="cb65-2"><a href="#cb65-2" aria-hidden="true" tabindex="-1"></a>result.km</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Call: survfit(formula = Surv(timeMonths, delta) ~ 1, conf.type = "log-log")
+
+      n events median 0.95LCL 0.95UCL
+[1,] 48     32   10.3    5.79    15.3</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb67"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(result.km)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Call: survfit(formula = Surv(timeMonths, delta) ~ 1, conf.type = "log-log")
+
+   time n.risk n.event survival std.err lower 95% CI upper 95% CI
+  0.926     48       1    0.979  0.0206        0.861        0.997
+  1.851     47       3    0.917  0.0399        0.793        0.968
+  2.083     44       1    0.896  0.0441        0.768        0.955
+  2.545     43       1    0.875  0.0477        0.743        0.942
+  2.777     42       1    0.854  0.0509        0.718        0.928
+  3.008     41       1    0.833  0.0538        0.694        0.913
+  3.702     40       2    0.792  0.0586        0.647        0.882
+  3.934     38       2    0.750  0.0625        0.602        0.850
+  4.397     36       1    0.729  0.0641        0.580        0.833
+  4.860     35       1    0.708  0.0656        0.558        0.816
+  5.554     34       2    0.667  0.0680        0.515        0.781
+  5.785     32       1    0.646  0.0690        0.494        0.763
+  6.479     31       2    0.604  0.0706        0.452        0.726
+  6.942     29       1    0.583  0.0712        0.432        0.708
+  8.562     28       2    0.542  0.0719        0.392        0.670
+  9.719     26       1    0.521  0.0721        0.372        0.650
+  9.950     25       1    0.500  0.0722        0.353        0.631
+ 10.645     23       1    0.478  0.0722        0.332        0.610
+ 12.264     19       1    0.453  0.0727        0.308        0.587
+ 13.653     16       1    0.425  0.0735        0.280        0.562
+ 13.884     14       1    0.394  0.0742        0.251        0.535
+ 14.810     13       1    0.364  0.0744        0.223        0.507
+ 15.273     12       1    0.334  0.0742        0.196        0.478
+ 17.587     11       1    0.303  0.0734        0.170        0.449
+ 18.050     10       1    0.273  0.0720        0.145        0.418</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb69"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a><span class="co"># The upper confidence limit is undefined (NA) when the upper confidence </span></span>
+<span id="cb69-2"><a href="#cb69-2" aria-hidden="true" tabindex="-1"></a><span class="co"># band for the survival curve never drops to 0.5</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="exercise-3.2" class="level3" data-number="8.2.2">
+<h3 data-number="8.2.2" class="anchored" data-anchor-id="exercise-3.2"><span class="header-section-number">8.2.2</span> Exercise 3.2</h3>
+<p>Find the first and third quartiles for the gastric cancer data with 95% confidence intervals.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb70"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb70-1"><a href="#cb70-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Quantiles for gastric cancer data</span></span>
+<span id="cb70-2"><a href="#cb70-2" aria-hidden="true" tabindex="-1"></a><span class="fu">quantile</span>(result.km, <span class="at">probs =</span> <span class="fu">c</span>(<span class="fl">0.25</span>, <span class="fl">0.75</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>$quantile
+      25       75 
+4.165289       NA 
+
+$lower
+       25        75 
+ 2.545455 14.809917 
+
+$upper
+      25       75 
+6.479339       NA </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb72"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb72-1"><a href="#cb72-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Note: Quartiles are times when S(t) = 0.75 (first quartile) and S(t) = 0.25 (third quartile)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="exercise-3.3" class="level3" data-number="8.2.3">
+<h3 data-number="8.2.3" class="anchored" data-anchor-id="exercise-3.3"><span class="header-section-number">8.2.3</span> Exercise 3.3</h3>
+<p>Create a smooth hazard function estimate with bandwidth 20 and explain any multiple peaks.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb73"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb73-1"><a href="#cb73-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Already created in the main text with bw.smooth = 20</span></span>
+<span id="cb73-2"><a href="#cb73-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(result.smooth, </span>
+<span id="cb73-3"><a href="#cb73-3" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">"Time"</span>, </span>
+<span id="cb73-4"><a href="#cb73-4" aria-hidden="true" tabindex="-1"></a>     <span class="at">ylab =</span> <span class="st">"Hazard Rate"</span>,</span>
+<span id="cb73-5"><a href="#cb73-5" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">"Smooth Hazard Function (bandwidth = 20)"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="chapter3_files/figure-html/exercise-3-3-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Smooth Hazard with Bandwidth 20</figcaption>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb74"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb74-1"><a href="#cb74-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Multiple peaks could indicate:</span></span>
+<span id="cb74-2"><a href="#cb74-2" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Different risk periods in disease progression</span></span>
+<span id="cb74-3"><a href="#cb74-3" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Treatment effects wearing off</span></span>
+<span id="cb74-4"><a href="#cb74-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Heterogeneity in patient populations</span></span>
+<span id="cb74-5"><a href="#cb74-5" aria-hidden="true" tabindex="-1"></a><span class="co"># 4. Artifacts from smoothing procedure</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="exercise-3.4" class="level3" data-number="8.2.4">
+<h3 data-number="8.2.4" class="anchored" data-anchor-id="exercise-3.4"><span class="header-section-number">8.2.4</span> Exercise 3.4</h3>
+<p>Compare left-truncated vs.&nbsp;non-truncated estimates and discuss potential bias.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb75"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb75-1"><a href="#cb75-1" aria-hidden="true" tabindex="-1"></a><span class="co"># This comparison shows how ignoring left truncation can lead to biased estimates</span></span>
+<span id="cb75-2"><a href="#cb75-2" aria-hidden="true" tabindex="-1"></a><span class="co"># The non-truncated estimate may underestimate survival at younger ages</span></span>
+<span id="cb75-3"><a href="#cb75-3" aria-hidden="true" tabindex="-1"></a><span class="co"># because individuals who died young were never observed in the study</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<hr>
+<p><a href="https://bsta-150.github.io/course/">← Return to Course Materials</a></p>
+</section>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>
