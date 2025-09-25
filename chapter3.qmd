@@ -9,7 +9,7 @@ format:
     code-fold: false
     theme: default
   pdf:
-    toc: true
+    toc: false
     number-sections: true
 execute:
   warning: false
@@ -355,9 +355,7 @@ legend("topright",
 channing$entryYears <- channing$entry / 12
 channing$exitYears <- channing$exit / 12
 
-# Check sex coding
-cat("Sex coding in dataset:\n")
-#print(table(channing$sex))
+
 
 # Filter for males using text matching
 
@@ -374,20 +372,22 @@ result.km.68 <- survfit(Surv(entryYears, exitYears, cens, type = "counting") ~ 1
                         data = channing,
                         start.time = 68)
 
-# Plot all three estimates
 plot(result.km.standard, 
      xlim = c(64, 101), 
      xlab = "Age",
      ylab = "Survival probability", 
      conf.int = FALSE,
-     main = "Survival Estimates for Channing House Data (Males)")
+     main = "Survival Estimates for Channing House Data (Males)",
+     frame = FALSE)  # removes the box
 
 lines(result.km.68, col = "green", conf.int = FALSE)
 
 legend("topright", 
        legend = c("KM",  "KM 68 and older"),
        lty = 1, 
-       col = c("black", "green"))
+       col = c("black", "green"),
+       bty = "n")  # remove legend box
+
 
 # Print summaries
 cat("\n=== Standard KM with left truncation ===\n")
@@ -404,15 +404,10 @@ print(result.km.68)
 # Remove rows with NA values in key variables
 channing <- channing[complete.cases(channing$entryYears, channing$exitYears, channing$cens), ]
 
-# Check for problematic observations where exit <= entry
-cat("Observations where exit <= entry:\n")
-problematic <- channing$exitYears <= channing$entryYears
-print(sum(problematic, na.rm = TRUE))
-
 # Remove problematic observations
 channing <- channing[channing$exitYears > channing$entryYears, ]
 
-cat("Remaining observations after cleaning:", nrow(channing), "\n")
+
 
 # Create age group based on entry age
 channing$ageGroup <- ifelse(channing$entryYears >= 75, "75+ at entry", "Under 75 at entry")
@@ -446,6 +441,49 @@ legend("topright",
 cat("\n=== Survival by Entry Age Group ===\n")
 print(result.km.byage)
 ```
+```{r}
+library(dplyr)
+library(survival)
+library(ggplot2)
+
+# Prep
+channing <- channing %>%
+  mutate(entryYears = entry/12,
+         exitYears  = exit/12)
+
+# Split by exact entry-age cutoff
+dat_under  <- filter(channing, entryYears < 75)
+dat_75plus <- filter(channing, entryYears >= 75)
+
+# Separate left-truncated KM fits (age on x because we use entryYears->exitYears)
+fit_under  <- survfit(Surv(entryYears, exitYears, cens, type = "counting") ~ 1, data = dat_under)
+fit_75plus <- survfit(Surv(entryYears, exitYears, cens, type = "counting") ~ 1, data = dat_75plus)
+
+# Tidy the survival outputs for plotting
+s_under <- summary(fit_under)
+s_75    <- summary(fit_75plus)
+
+print(fit_under)
+print(fit_75plus)
+
+df_plot <- bind_rows(
+  data.frame(age = s_under$time, surv = s_under$surv, group = "Under 75 at entry"),
+  data.frame(age = s_75$time,    surv = s_75$surv,    group = "75+ at entry")
+)
+
+# Plot (step function, age on x)
+ggplot(df_plot, aes(x = age, y = surv, color = group)) +
+  geom_step(linewidth = 1.1) +
+  coord_cartesian(xlim = c(64, 101), ylim = c(0, 1)) +
+  labs(title = "Survival by Entry Age (Exact 75+ Cutoff): Channing House (Males)",
+       x = "Age", y = "Survival probability") +
+  geom_vline(xintercept = 75, linetype = 2) +
+  theme_classic(base_size = 12) +
+  theme(legend.title = element_blank(), legend.position = "top")
+
+```
+
+
 ## What do we see from the results?
 
 -   231 people entered at 75+, 226 entered under 75 (well-balanced groups)
